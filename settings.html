@@ -139,6 +139,26 @@
     </div>
   </div>
 
+  <!-- PIN -->
+  <div class="setting-section-header">PIN Lock</div>
+  <div class="card">
+    <div class="hint" style="margin-bottom:12px;">Your PIN is required each time you open the app. GitHub credentials are saved once and never asked again.</div>
+    <div class="input-row-2">
+      <div class="form-group" style="margin-top:0">
+        <label for="newPin">New PIN (4 digits)</label>
+        <input type="password" id="newPin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••">
+      </div>
+      <div class="form-group" style="margin-top:0">
+        <label for="confirmPin">Confirm PIN</label>
+        <input type="password" id="confirmPin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••">
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; margin-top:12px; align-items:center;">
+      <button class="btn btn-primary" id="savePin">Set PIN</button>
+      <span id="pinStatus" style="font-size:.85rem; color:var(--muted);"></span>
+    </div>
+  </div>
+
   <div style="height: 20px;"></div>
 
 </main>
@@ -164,6 +184,8 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="js/auth.js"></script>
+<script>checkAuth();</script>
 <script src="js/github-api.js"></script>
 <script src="js/targets.js"></script>
 <script>
@@ -307,6 +329,25 @@ function showToast(msg, dur = 2500) {
   toastTimer = setTimeout(() => t.classList.remove('show'), dur);
 }
 
+// ── PIN ──
+function showPinStatus() {
+  const pin = localStorage.getItem('app_pin');
+  document.getElementById('pinStatus').textContent = pin ? '✓ PIN is set' : 'No PIN set yet';
+}
+
+document.getElementById('savePin').addEventListener('click', () => {
+  const p1 = document.getElementById('newPin').value;
+  const p2 = document.getElementById('confirmPin').value;
+  if (!/^\d{4}$/.test(p1)) { showToast('PIN must be exactly 4 digits'); return; }
+  if (p1 !== p2) { showToast('PINs don\'t match'); return; }
+  localStorage.setItem('app_pin', p1);
+  document.getElementById('newPin').value = '';
+  document.getElementById('confirmPin').value = '';
+  showPinStatus();
+  showToast('PIN saved');
+});
+
+showPinStatus();
 loadSaved();
 loadProfile();
 </script>

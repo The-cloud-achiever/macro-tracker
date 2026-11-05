@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Macro Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2d7dd2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <style>
+    :root {
+      --bg: #f7f7f5; --surface: #fff; --text: #1a1a1a; --muted: #6b6b6b;
+      --accent: #2d7dd2; --border: #e4e4e0; --over: #dc2626;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #111110; --surface: #1c1c1b; --text: #f0ede8; --muted: #9b9790; --border: #2e2e2b; }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+
+    .screen { min-height: 100dvh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 24px 24px calc(24px + env(safe-area-inset-bottom)); }
+
+    .app-icon {
+      width: 72px; height: 72px; background: var(--accent); border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.2rem; font-weight: 700; color: #fff; margin-bottom: 16px;
+    }
+    h1 { font-size: 1.3rem; font-weight: 600; margin-bottom: 6px; }
+    .subtitle { font-size: .88rem; color: var(--muted); margin-bottom: 40px; }
+
+    /* Dots */
+    .dots { display: flex; gap: 14px; margin-bottom: 32px; height: 16px; align-items: center; }
+    .dot {
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 2px solid var(--muted); background: transparent;
+      transition: background .15s, border-color .15s, transform .1s;
+    }
+    .dot.filled { background: var(--accent); border-color: var(--accent); }
+    .dot.error  { background: var(--over);  border-color: var(--over); transform: scale(1.1); }
+
+    /* Keypad */
+    .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; max-width: 300px; }
+    .key {
+      aspect-ratio: 1; border-radius: 50%; border: none; background: var(--surface);
+      font-size: 1.5rem; font-weight: 400; color: var(--text); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,.1);
+      transition: background .1s, transform .1s;
+      -webkit-user-select: none; user-select: none;
+    }
+    .key:active { background: var(--border); transform: scale(.93); }
+    .key.del { font-size: 1.1rem; color: var(--muted); }
+    .key.empty { background: transparent; box-shadow: none; cursor: default; }
+
+    .error-msg { font-size: .85rem; color: var(--over); margin-top: 20px;
+      min-height: 20px; text-align: center; }
+
+    /* First-time setup */
+    .setup-card { background: var(--surface); border-radius: 16px; padding: 24px;
+      max-width: 340px; width: 100%; text-align: center; }
+    .setup-card h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
+    .setup-card p { font-size: .88rem; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+    .setup-step { font-size: .78rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .05em; color: var(--accent); margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+
+<div class="screen" id="pinScreen">
+  <div class="app-icon">M</div>
+  <h1>Macro Tracker</h1>
+  <p class="subtitle" id="pinSubtitle">Enter your PIN</p>
+
+  <div class="dots" id="dots">
+    <div class="dot" id="d0"></div>
+    <div class="dot" id="d1"></div>
+    <div class="dot" id="d2"></div>
+    <div class="dot" id="d3"></div>
+  </div>
+
+  <div class="keypad">
+    <button class="key" data-n="1">1</button>
+    <button class="key" data-n="2">2</button>
+    <button class="key" data-n="3">3</button>
+    <button class="key" data-n="4">4</button>
+    <button class="key" data-n="5">5</button>
+    <button class="key" data-n="6">6</button>
+    <button class="key" data-n="7">7</button>
+    <button class="key" data-n="8">8</button>
+    <button class="key" data-n="9">9</button>
+    <button class="key empty"></button>
+    <button class="key" data-n="0">0</button>
+    <button class="key del" id="delKey">⌫</button>
+  </div>
+
+  <div class="error-msg" id="errorMsg"></div>
+</div>
+
+<script>
+const DEST = sessionStorage.getItem('lock_dest') || 'index.html';
+
+let entered = '';
+let isConfirming = false;  // for first-time setup confirm step
+let firstPin = '';
+let mode = 'unlock'; // 'unlock' | 'setup_first' | 'setup_confirm'
+
+function getPin()    { return localStorage.getItem('app_pin'); }
+function setPin(p)   { localStorage.setItem('app_pin', p); }
+function isGHReady() { return !!(localStorage.getItem('gh_token') && localStorage.getItem('gh_owner') && localStorage.getItem('gh_repo')); }
+
+function init() {
+  const pin = getPin();
+  if (!pin) {
+    // No PIN set yet — go straight to settings if GH not configured either
+    if (!isGHReady()) {
+      // First ever launch — no PIN, no GH. Send to settings.
+      sessionStorage.setItem('lock_unlocked', '1');
+      window.location.replace('settings.html');
+      return;
+    }
+    // GH is configured but no PIN yet — set up PIN now
+    mode = 'setup_first';
+    document.getElementById('pinSubtitle').textContent = 'Create a 4-digit PIN';
+  } else {
+    mode = 'unlock';
+    document.getElementById('pinSubtitle').textContent = 'Enter your PIN';
+  }
+  renderDots();
+}
+
+function renderDots() {
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById('d' + i);
+    d.className = 'dot' + (i < entered.length ? ' filled' : '');
+  }
+}
+
+function flash(type) {
+  for (let i = 0; i < 4; i++) document.getElementById('d' + i).className = 'dot ' + type;
+  setTimeout(() => { entered = ''; renderDots(); }, 500);
+}
+
+function pressKey(n) {
+  if (entered.length >= 4) return;
+  entered += n;
+  renderDots();
+  document.getElementById('errorMsg').textContent = '';
+
+  if (entered.length === 4) {
+    setTimeout(() => check(), 80);
+  }
+}
+
+function delKey() {
+  entered = entered.slice(0, -1);
+  renderDots();
+}
+
+function check() {
+  if (mode === 'unlock') {
+    if (entered === getPin()) {
+      sessionStorage.setItem('lock_unlocked', '1');
+      window.location.replace(DEST);
+    } else {
+      flash('error');
+      document.getElementById('errorMsg').textContent = 'Wrong PIN — try again';
+    }
+
+  } else if (mode === 'setup_first') {
+    firstPin = entered;
+    entered = '';
+    mode = 'setup_confirm';
+    document.getElementById('pinSubtitle').textContent = 'Confirm your PIN';
+    renderDots();
+
+  } else if (mode === 'setup_confirm') {
+    if (entered === firstPin) {
+      setPin(entered);
+      sessionStorage.setItem('lock_unlocked', '1');
+      window.location.replace(DEST);
+    } else {
+      flash('error');
+      firstPin = '';
+      mode = 'setup_first';
+      document.getElementById('pinSubtitle').textContent = 'PINs didn\'t match — try again';
+    }
+  }
+}
+
+document.querySelectorAll('.key[data-n]').forEach(btn => {
+  btn.addEventListener('click', () => pressKey(btn.dataset.n));
+});
+document.getElementById('delKey').addEventListener('click', delKey);
+
+// Also support physical keyboard
+document.addEventListener('keydown', e => {
+  if (e.key >= '0' && e.key <= '9') pressKey(e.key);
+  if (e.key === 'Backspace') delKey();
+});
+
+init();
+</script>
+</body>
+</html>

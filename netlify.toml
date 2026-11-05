@@ -1,3 +1,8 @@
+[[redirects]]
+  from = "/"
+  to = "/lock.html"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]
