@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Settings — Macro Tracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2d7dd2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+</head>
+<body>
+
+<div class="loading-overlay hidden" id="loadingOverlay">
+  <div class="spinner"></div> Loading…
+</div>
+
+<header>
+  <div class="header-row">
+    <h1>Settings</h1>
+  </div>
+</header>
+
+<main class="page">
+
+  <!-- GitHub connection -->
+  <div class="setting-section-header">GitHub Storage</div>
+  <div class="card">
+    <div class="form-group" style="margin-top:0">
+      <label for="ghOwner">GitHub username or org</label>
+      <input type="text" id="ghOwner" placeholder="your-username" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="form-group">
+      <label for="ghRepo">Repository name</label>
+      <input type="text" id="ghRepo" placeholder="my-macro-tracker" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="form-group">
+      <label for="ghToken">Personal Access Token</label>
+      <div class="token-row">
+        <input type="password" id="ghToken" placeholder="github_pat_…" autocomplete="off" spellcheck="false">
+        <button class="btn btn-secondary" id="toggleToken" title="Show/hide token">👁</button>
+      </div>
+      <div class="hint">Create a fine-grained token with Contents: Read & Write access to this repo only. Stored in localStorage only, never sent anywhere except GitHub.</div>
+    </div>
+    <div style="margin-top:14px; display:flex; gap:8px;">
+      <button class="btn btn-primary" id="saveGH">Save Connection</button>
+      <button class="btn btn-secondary" id="testGH">Test</button>
+    </div>
+    <div id="ghStatus" style="margin-top:10px; font-size:.85rem;"></div>
+  </div>
+
+  <!-- Profile -->
+  <div class="setting-section-header">Profile & Targets</div>
+  <div class="card">
+    <div class="input-row-2">
+      <div class="form-group" style="margin-top:0">
+        <label for="weight">Weight (kg)</label>
+        <input type="number" id="weight" placeholder="65" min="30" max="300" step="0.1">
+      </div>
+      <div class="form-group" style="margin-top:0">
+        <label for="height">Height (cm)</label>
+        <input type="number" id="height" placeholder="165" min="100" max="250">
+      </div>
+    </div>
+    <div class="input-row-2">
+      <div class="form-group">
+        <label for="age">Age</label>
+        <input type="number" id="age" placeholder="25" min="15" max="100">
+      </div>
+      <div class="form-group">
+        <label for="sex">Biological sex</label>
+        <select id="sex">
+          <option value="female">Female</option>
+          <option value="male">Male</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="activity">Activity level</label>
+      <select id="activity">
+        <option value="sedentary">Sedentary (desk job, no exercise)</option>
+        <option value="lightly_active" selected>Lightly active (1–3 days/week)</option>
+        <option value="moderately_active">Moderately active (3–5 days/week)</option>
+        <option value="very_active">Very active (6–7 days/week)</option>
+        <option value="extra_active">Extra active (athlete / physical job)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="deficit">Daily deficit (kcal)</label>
+      <input type="number" id="deficit" placeholder="500" min="0" max="1500">
+      <div class="hint">Enter 0 for maintenance. 500 ≈ 0.5 kg/week loss.</div>
+    </div>
+
+    <div id="targetPreview" class="card" style="margin-top:16px; background:var(--bg); display:none;">
+      <div style="font-size:.8rem; font-weight:600; color:var(--muted); margin-bottom:8px;">CALCULATED TARGETS</div>
+      <div class="macro-grid">
+        <div class="macro-cell">
+          <div class="macro-label">Calories</div>
+          <div class="macro-value" id="prevCal" style="color:var(--text)">—</div>
+        </div>
+        <div class="macro-cell">
+          <div class="macro-label">Protein</div>
+          <div class="macro-value" id="prevProt" style="color:var(--text)">—</div>
+        </div>
+        <div class="macro-cell">
+          <div class="macro-label">Fat</div>
+          <div class="macro-value" id="prevFat" style="color:var(--text)">—</div>
+        </div>
+      </div>
+      <div style="font-size:.75rem; color:var(--muted); margin-top:8px;" id="prevTDEE"></div>
+    </div>
+
+    <div style="display:flex; gap:8px; margin-top:14px;">
+      <button class="btn btn-secondary" id="calcBtn">Calculate</button>
+      <button class="btn btn-primary" id="saveProfile">Save Profile & Targets</button>
+    </div>
+  </div>
+
+  <!-- Manual target override -->
+  <div class="setting-section-header">Manual Target Override</div>
+  <div class="card">
+    <div class="hint" style="margin-bottom:12px;">Override the calculated targets. Leave blank to use calculated values.</div>
+    <div class="input-row">
+      <div>
+        <input type="number" id="manCal" placeholder="e.g. 1400" min="800" max="5000">
+        <div class="hint">Calories</div>
+      </div>
+      <div>
+        <input type="number" id="manProt" placeholder="e.g. 115" min="0" max="500" step="0.1">
+        <div class="hint">Protein (g)</div>
+      </div>
+      <div>
+        <input type="number" id="manFat" placeholder="e.g. 40" min="0" max="300" step="0.1">
+        <div class="hint">Fat (g)</div>
+      </div>
+    </div>
+    <div style="margin-top:14px;">
+      <button class="btn btn-primary btn-full" id="saveManual">Save Manual Targets</button>
+    </div>
+  </div>
+
+  <div style="height: 20px;"></div>
+
+</main>
+
+<nav class="bottom-nav">
+  <a href="index.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Today
+  </a>
+  <a href="history.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+    History
+  </a>
+  <a href="body.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l4-8 4 6 3-4 4 6"/></svg>
+    Body
+  </a>
+  <a href="settings.html" class="active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Settings
+  </a>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/github-api.js"></script>
+<script src="js/targets.js"></script>
+<script>
+// ── Load saved values ──
+function loadSaved() {
+  document.getElementById('ghOwner').value = localStorage.getItem('gh_owner') || '';
+  document.getElementById('ghRepo').value  = localStorage.getItem('gh_repo')  || '';
+  document.getElementById('ghToken').value = localStorage.getItem('gh_token') || '';
+}
+
+async function loadProfile() {
+  if (!GH.isConfigured()) return;
+  try {
+    const res = await GH.readJSON('profile.json');
+    if (!res) return;
+    const p = res.data;
+    document.getElementById('weight').value   = p.weight_kg   || '';
+    document.getElementById('height').value   = p.height_cm   || '';
+    document.getElementById('age').value      = p.age         || '';
+    document.getElementById('sex').value      = p.sex         || 'female';
+    document.getElementById('activity').value = p.activity_level || 'lightly_active';
+    document.getElementById('deficit').value  = p.deficit_kcal ?? '';
+
+    if (p.targets) {
+      document.getElementById('manCal').value  = p.targets.calories  || '';
+      document.getElementById('manProt').value = p.targets.protein_g || '';
+      document.getElementById('manFat').value  = p.targets.fat_g     || '';
+    }
+  } catch {}
+}
+
+// ── GitHub ──
+document.getElementById('toggleToken').addEventListener('click', () => {
+  const inp = document.getElementById('ghToken');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+});
+
+document.getElementById('saveGH').addEventListener('click', () => {
+  const owner = document.getElementById('ghOwner').value.trim();
+  const repo  = document.getElementById('ghRepo').value.trim();
+  const token = document.getElementById('ghToken').value.trim();
+  if (!owner || !repo || !token) { showToast('Fill in all GitHub fields'); return; }
+  localStorage.setItem('gh_owner', owner);
+  localStorage.setItem('gh_repo', repo);
+  localStorage.setItem('gh_token', token);
+  showToast('GitHub settings saved');
+});
+
+document.getElementById('testGH').addEventListener('click', async () => {
+  const st = document.getElementById('ghStatus');
+  st.textContent = 'Testing…';
+  try {
+    const res = await GH.readJSON('targets.json');
+    st.style.color = 'var(--ok)';
+    st.textContent = res ? '✓ Connected — targets.json found' : '✓ Connected — repo accessible (targets.json not yet created)';
+  } catch (e) {
+    st.style.color = 'var(--over)';
+    st.textContent = '✗ ' + e.message;
+  }
+});
+
+// ── Profile / targets ──
+function buildProfile() {
+  return {
+    weight_kg:      parseFloat(document.getElementById('weight').value)   || null,
+    height_cm:      parseFloat(document.getElementById('height').value)   || null,
+    age:            parseInt(document.getElementById('age').value)         || null,
+    sex:            document.getElementById('sex').value,
+    activity_level: document.getElementById('activity').value,
+    deficit_kcal:   parseFloat(document.getElementById('deficit').value)  || 0,
+  };
+}
+
+document.getElementById('calcBtn').addEventListener('click', () => {
+  const p = buildProfile();
+  if (!p.weight_kg || !p.height_cm || !p.age) { showToast('Enter weight, height and age first'); return; }
+  const t = calcTargets(p);
+  document.getElementById('prevCal').textContent  = t.calories + ' kcal';
+  document.getElementById('prevProt').textContent = t.protein_g + 'g';
+  document.getElementById('prevFat').textContent  = t.fat_g + 'g';
+  document.getElementById('prevTDEE').textContent = `BMR ${t.bmr} kcal · TDEE ${t.tdee} kcal`;
+  document.getElementById('targetPreview').style.display = '';
+});
+
+document.getElementById('saveProfile').addEventListener('click', async () => {
+  const p = buildProfile();
+  if (!p.weight_kg || !p.height_cm || !p.age) { showToast('Enter weight, height and age'); return; }
+  if (!GH.isConfigured()) { showToast('Set up GitHub first'); return; }
+
+  const btn = document.getElementById('saveProfile');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try {
+    const t = calcTargets(p);
+    p.targets = { calories: t.calories, protein_g: t.protein_g, fat_g: t.fat_g };
+
+    await GH.upsertJSON('profile.json', p, 'update profile');
+    await GH.upsertJSON('targets.json', p.targets, 'update targets');
+    showToast('Profile & targets saved');
+    document.getElementById('calcBtn').click();
+  } catch (e) {
+    showToast('Save failed: ' + e.message, 5000);
+  }
+  btn.disabled = false; btn.textContent = 'Save Profile & Targets';
+});
+
+document.getElementById('saveManual').addEventListener('click', async () => {
+  const cal  = parseFloat(document.getElementById('manCal').value);
+  const prot = parseFloat(document.getElementById('manProt').value);
+  const fat  = parseFloat(document.getElementById('manFat').value);
+  if (!cal) { showToast('Enter at least a calorie target'); return; }
+  if (!GH.isConfigured()) { showToast('Set up GitHub first'); return; }
+
+  const btn = document.getElementById('saveManual');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try {
+    const targets = { calories: cal, protein_g: prot || 0, fat_g: fat || 0 };
+    await GH.upsertJSON('targets.json', targets, 'update manual targets');
+
+    // Also update profile.json targets if profile exists
+    const profileRes = await GH.readJSON('profile.json');
+    if (profileRes) {
+      const p = profileRes.data;
+      p.targets = targets;
+      await GH.writeJSON('profile.json', p, profileRes.sha, 'update profile targets');
+    }
+    showToast('Manual targets saved');
+  } catch (e) {
+    showToast('Save failed: ' + e.message, 5000);
+  }
+  btn.disabled = false; btn.textContent = 'Save Manual Targets';
+});
+
+let toastTimer;
+function showToast(msg, dur = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), dur);
+}
+
+loadSaved();
+loadProfile();
+</script>
+</body>
+</html>

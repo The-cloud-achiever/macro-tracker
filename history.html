@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>History — Macro Tracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2d7dd2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div> Loading…
+</div>
+
+<header>
+  <div class="header-row">
+    <h1>History</h1>
+  </div>
+</header>
+
+<main class="page">
+  <div id="historyList">
+    <div class="empty" id="emptyState">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+      <p>No history yet — log some meals first.</p>
+    </div>
+  </div>
+
+  <div style="text-align:center; margin-top:16px;">
+    <button class="btn btn-secondary" id="loadMoreBtn" style="display:none;">Load more</button>
+  </div>
+</main>
+
+<!-- Day detail modal -->
+<div class="modal-backdrop hidden" id="dayModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="dayModalTitle">—</h2>
+      <button class="btn-icon" id="dayModalClose">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="dayModalContent"></div>
+  </div>
+</div>
+
+<nav class="bottom-nav">
+  <a href="index.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Today
+  </a>
+  <a href="history.html" class="active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+    History
+  </a>
+  <a href="body.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l4-8 4 6 3-4 4 6"/></svg>
+    Body
+  </a>
+  <a href="settings.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Settings
+  </a>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/github-api.js"></script>
+<script src="js/targets.js"></script>
+<script>
+const PAGE_SIZE = 30;
+let allDates = [];
+let loadedCount = 0;
+let targets = null;
+let dayCache = {};
+
+function todayStr() { return new Date().toLocaleDateString('en-CA'); }
+
+function fmtDate(d) {
+  if (d === todayStr()) return 'Today';
+  const dt = new Date(d + 'T12:00:00');
+  return dt.toLocaleDateString('en-US', { weekday:'short', month:'long', day:'numeric', year:'numeric' });
+}
+
+async function init() {
+  if (!GH.isConfigured()) {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    showToast('Set up GitHub in Settings first', 4000);
+    return;
+  }
+  try {
+    const [files, targRes] = await Promise.all([
+      GH.listDir('logs'),
+      GH.readJSON('targets.json'),
+    ]);
+    targets = targRes?.data || null;
+    allDates = files
+      .filter(f => f.name.endsWith('.json'))
+      .map(f => f.name.replace('.json',''))
+      .sort((a,b) => b.localeCompare(a));  // newest first
+
+    document.getElementById('emptyState').style.display = allDates.length ? 'none' : '';
+    await loadBatch();
+  } catch (e) {
+    showToast('Error: ' + e.message, 5000);
+  }
+  document.getElementById('loadingOverlay').classList.add('hidden');
+}
+
+async function loadBatch() {
+  const batch = allDates.slice(loadedCount, loadedCount + PAGE_SIZE);
+  if (!batch.length) return;
+
+  const results = await Promise.all(batch.map(d => GH.readJSON(`logs/${d}.json`).catch(() => null)));
+  results.forEach((res, i) => {
+    if (res) {
+      dayCache[batch[i]] = res.data;
+      renderDay(batch[i], res.data);
+    }
+  });
+  loadedCount += batch.length;
+  document.getElementById('loadMoreBtn').style.display = loadedCount < allDates.length ? '' : 'none';
+}
+
+function renderDay(date, log) {
+  const list = document.getElementById('historyList');
+  const meals = log.meals || [];
+  const totCal  = meals.reduce((s,m) => s + (m.calories || 0), 0);
+  const totProt = meals.reduce((s,m) => s + (m.protein_g || 0), 0);
+  const totFat  = meals.reduce((s,m) => s + (m.fat_g || 0), 0);
+
+  const cls = targets?.calories ? statusClass(totCal, targets.calories) : 'ok';
+
+  const div = document.createElement('div');
+  div.className = 'history-day';
+  div.dataset.date = date;
+  div.innerHTML = `
+    <div class="history-day-header">
+      <span class="history-date">${fmtDate(date)}</span>
+      <span class="history-cal ${cls}">${Math.round(totCal)} kcal</span>
+    </div>
+    <div class="history-macros">${meals.length} meal${meals.length !== 1 ? 's' : ''} · ${Math.round(totProt)}g protein · ${Math.round(totFat)}g fat</div>
+    ${targets?.calories ? `<div class="bar-wrap" style="margin-top:8px;"><div class="bar-fill ${cls}" style="width:${pct(totCal, targets.calories)}%"></div></div>` : ''}
+  `;
+  div.addEventListener('click', () => openDay(date));
+  list.appendChild(div);
+}
+
+function openDay(date) {
+  const log = dayCache[date];
+  if (!log) return;
+  const meals = log.meals || [];
+
+  document.getElementById('dayModalTitle').textContent = fmtDate(date);
+
+  const totCal  = meals.reduce((s,m) => s + (m.calories || 0), 0);
+  const totProt = meals.reduce((s,m) => s + (m.protein_g || 0), 0);
+  const totFat  = meals.reduce((s,m) => s + (m.fat_g || 0), 0);
+
+  let html = `
+    <div class="macro-grid" style="margin-bottom:16px;">
+      <div class="macro-cell"><div class="macro-label">Calories</div><div class="macro-value" style="color:var(--text)">${Math.round(totCal)}</div></div>
+      <div class="macro-cell"><div class="macro-label">Protein</div><div class="macro-value" style="color:var(--text)">${Math.round(totProt)}g</div></div>
+      <div class="macro-cell"><div class="macro-label">Fat</div><div class="macro-value" style="color:var(--text)">${Math.round(totFat)}g</div></div>
+    </div>`;
+
+  meals.forEach(m => {
+    html += `
+      <div class="meal-item" style="margin-bottom:8px;">
+        <div class="meal-info">
+          <div class="meal-time">${m.time || ''}</div>
+          <div class="meal-desc">${escHtml(m.description || '')}</div>
+          <div class="meal-macros">
+            <span>${m.calories || 0} kcal</span>
+            <span>${m.protein_g || 0}g protein</span>
+            <span>${m.fat_g || 0}g fat</span>
+          </div>
+        </div>
+      </div>`;
+  });
+
+  if (!meals.length) html += '<div class="empty" style="padding:20px;"><p>No meals logged</p></div>';
+
+  document.getElementById('dayModalContent').innerHTML = html;
+  document.getElementById('dayModal').classList.remove('hidden');
+}
+
+document.getElementById('dayModalClose').addEventListener('click', () => document.getElementById('dayModal').classList.add('hidden'));
+document.getElementById('dayModal').addEventListener('click', e => { if (e.target === document.getElementById('dayModal')) document.getElementById('dayModal').classList.add('hidden'); });
+document.getElementById('loadMoreBtn').addEventListener('click', loadBatch);
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+let toastTimer;
+function showToast(msg, dur = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), dur);
+}
+
+init();
+</script>
+</body>
+</html>

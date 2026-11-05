@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Body — Macro Tracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2d7dd2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div> Loading…
+</div>
+
+<header>
+  <div class="header-row">
+    <h1>Body</h1>
+    <div class="date-nav">
+      <button id="prevDay">&#8249;</button>
+      <span class="date-label" id="dateLabel"></span>
+      <button id="nextDay">&#8250;</button>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+
+  <!-- Log form -->
+  <div class="card">
+    <div class="input-row-2">
+      <div class="form-group" style="margin-top:0">
+        <label for="weightInput">Weight (kg)</label>
+        <input type="number" id="weightInput" placeholder="e.g. 64.8" min="30" max="300" step="0.1">
+      </div>
+      <div class="form-group" style="margin-top:0">
+        <label for="waistInput">Waist (cm)</label>
+        <input type="number" id="waistInput" placeholder="e.g. 71.5" min="40" max="200" step="0.1">
+      </div>
+    </div>
+    <div class="hint" style="margin-bottom:12px;">Leave a field blank to skip logging it today.</div>
+    <button class="btn btn-primary btn-full" id="saveMeas">Save Today's Measurements</button>
+  </div>
+
+  <!-- Recent measurements -->
+  <div class="section-title">Recent entries</div>
+  <div id="measList">
+    <div class="empty" id="emptyState">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 17l4-8 4 6 3-4 4 6"/></svg>
+      <p>No measurements logged yet.</p>
+    </div>
+  </div>
+
+</main>
+
+<nav class="bottom-nav">
+  <a href="index.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Today
+  </a>
+  <a href="history.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+    History
+  </a>
+  <a href="body.html" class="active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l4-8 4 6 3-4 4 6"/></svg>
+    Body
+  </a>
+  <a href="settings.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Settings
+  </a>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/github-api.js"></script>
+<script>
+let currentDate = todayStr();
+let currentSha  = null;
+let recentData  = [];   // array of { date, data }
+
+function todayStr() { return new Date().toLocaleDateString('en-CA'); }
+
+function fmtDate(d) {
+  if (d === todayStr()) return 'Today';
+  const dt = new Date(d + 'T12:00:00');
+  return dt.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+}
+
+async function init() {
+  if (!GH.isConfigured()) {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    showToast('Set up GitHub in Settings first', 4000);
+    return;
+  }
+  renderDateNav();
+  await loadAll();
+}
+
+function renderDateNav() {
+  document.getElementById('dateLabel').textContent = fmtDate(currentDate);
+  document.getElementById('nextDay').disabled = currentDate >= todayStr();
+}
+
+async function loadAll() {
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+  try {
+    // Load current date measurement
+    const res = await GH.readJSON(`measurements/${currentDate}.json`);
+    currentSha = res?.sha || null;
+    if (res) {
+      document.getElementById('weightInput').value = res.data.weight_kg ?? '';
+      document.getElementById('waistInput').value  = res.data.waist_cm  ?? '';
+    } else {
+      document.getElementById('weightInput').value = '';
+      document.getElementById('waistInput').value  = '';
+    }
+
+    // Load recent 14 days for the list
+    const days = [];
+    const today = new Date();
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      days.push(d.toLocaleDateString('en-CA'));
+    }
+    const results = await Promise.all(days.map(d => GH.readJSON(`measurements/${d}.json`).catch(() => null)));
+    recentData = results
+      .map((r, i) => r ? { date: days[i], data: r.data } : null)
+      .filter(Boolean);
+
+    renderList();
+  } catch (e) {
+    showToast('Error: ' + e.message, 5000);
+  }
+  document.getElementById('loadingOverlay').classList.add('hidden');
+}
+
+function renderList() {
+  const list = document.getElementById('measList');
+  list.querySelectorAll('.meas-entry').forEach(el => el.remove());
+  document.getElementById('emptyState').style.display = recentData.length ? 'none' : '';
+
+  recentData.forEach(({ date, data }) => {
+    const div = document.createElement('div');
+    div.className = 'card meas-entry';
+    div.style.marginTop = '8px';
+    let html = `<div style="font-weight:600; margin-bottom:8px;">${fmtDate(date)}</div>`;
+    if (data.weight_kg != null) html += `<div class="meas-row"><span class="meas-label">Weight</span><span class="meas-value">${data.weight_kg} kg</span></div>`;
+    if (data.waist_cm  != null) html += `<div class="meas-row"><span class="meas-label">Waist</span><span class="meas-value">${data.waist_cm} cm</span></div>`;
+    div.innerHTML = html;
+    list.appendChild(div);
+  });
+}
+
+document.getElementById('prevDay').addEventListener('click', () => {
+  const d = new Date(currentDate + 'T12:00:00');
+  d.setDate(d.getDate() - 1);
+  currentDate = d.toLocaleDateString('en-CA');
+  currentSha = null;
+  renderDateNav();
+  loadAll();
+});
+document.getElementById('nextDay').addEventListener('click', () => {
+  if (currentDate >= todayStr()) return;
+  const d = new Date(currentDate + 'T12:00:00');
+  d.setDate(d.getDate() + 1);
+  currentDate = d.toLocaleDateString('en-CA');
+  currentSha = null;
+  renderDateNav();
+  loadAll();
+});
+
+document.getElementById('saveMeas').addEventListener('click', async () => {
+  const weight = parseFloat(document.getElementById('weightInput').value);
+  const waist  = parseFloat(document.getElementById('waistInput').value);
+  if (!weight && !waist) { showToast('Enter at least one measurement'); return; }
+
+  const btn = document.getElementById('saveMeas');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try {
+    const obj = { date: currentDate };
+    if (!isNaN(weight) && weight) obj.weight_kg = weight;
+    if (!isNaN(waist)  && waist)  obj.waist_cm  = waist;
+    const res = await GH.writeJSON(`measurements/${currentDate}.json`, obj, currentSha, 'log body measurement');
+    currentSha = res.content.sha;
+    showToast('Saved');
+    await loadAll();
+  } catch (e) {
+    showToast('Save failed: ' + e.message, 5000);
+  }
+  btn.disabled = false; btn.textContent = 'Save Today\'s Measurements';
+});
+
+let toastTimer;
+function showToast(msg, dur = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), dur);
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Macro Tracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2d7dd2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Macros">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div> Loading…
+</div>
+
+<header>
+  <div class="header-row">
+    <h1>Macro Tracker</h1>
+    <div class="date-nav">
+      <button id="prevDay" aria-label="Previous day">&#8249;</button>
+      <span class="date-label" id="dateLabel"></span>
+      <button id="nextDay" aria-label="Next day" id="nextDay">&#8250;</button>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+
+  <!-- Summary card -->
+  <div class="card" id="summaryCard">
+    <div class="cal-row">
+      <span class="cal-big" id="calConsumed">0</span>
+      <span class="cal-target" id="calTarget">/ — kcal</span>
+      <span class="cal-remain" id="calRemain"></span>
+    </div>
+    <div class="bar-wrap" style="margin-top:10px;">
+      <div class="bar-fill ok" id="calBar" style="width:0%"></div>
+    </div>
+    <div class="macro-grid" style="margin-top:14px;">
+      <div class="macro-cell">
+        <div class="macro-label">Protein</div>
+        <div class="macro-value" id="protVal">0g</div>
+        <div class="macro-remain" id="protRemain"></div>
+        <div class="bar-wrap"><div class="bar-fill ok" id="protBar" style="width:0%"></div></div>
+      </div>
+      <div class="macro-cell">
+        <div class="macro-label">Fat</div>
+        <div class="macro-value" id="fatVal">0g</div>
+        <div class="macro-remain" id="fatRemain"></div>
+        <div class="bar-wrap"><div class="bar-fill ok" id="fatBar" style="width:0%"></div></div>
+      </div>
+      <div class="macro-cell">
+        <div class="macro-label">Meals</div>
+        <div class="macro-value" id="mealCount" style="color:var(--text)">0</div>
+        <div class="macro-remain" id="mealNote"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Meal log -->
+  <div class="section-title">Meals</div>
+  <div class="meal-list" id="mealList">
+    <div class="empty" id="emptyState">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+      <p>No meals logged yet.<br>Tap + to add one.</p>
+    </div>
+  </div>
+
+  <!-- Measurement card (shown if measurement exists for today) -->
+  <div class="section-title" id="measSection" style="display:none">Body</div>
+  <div class="card" id="measCard" style="display:none">
+    <div class="meas-row" id="weightRow" style="display:none">
+      <span class="meas-label">Weight</span>
+      <span class="meas-value" id="weightVal">—</span>
+    </div>
+    <div class="meas-row" id="waistRow" style="display:none">
+      <span class="meas-label">Waist</span>
+      <span class="meas-value" id="waistVal">—</span>
+    </div>
+  </div>
+
+</main>
+
+<!-- FAB -->
+<button class="fab" id="fabAdd" title="Add meal">+</button>
+
+<!-- Bottom nav -->
+<nav class="bottom-nav">
+  <a href="index.html" class="active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Today
+  </a>
+  <a href="history.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+    History
+  </a>
+  <a href="body.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l4-8 4 6 3-4 4 6"/></svg>
+    Body
+  </a>
+  <a href="settings.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Settings
+  </a>
+</nav>
+
+<!-- Add / Edit Meal Modal -->
+<div class="modal-backdrop hidden" id="mealModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">Add Meal</h2>
+      <button class="btn-icon" id="modalClose" aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="form-group">
+      <label for="mealTime">Time of day</label>
+      <select id="mealTime">
+        <option value="breakfast">Breakfast</option>
+        <option value="lunch" selected>Lunch</option>
+        <option value="dinner">Dinner</option>
+        <option value="snack">Snack</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="mealDesc">Description</label>
+      <textarea id="mealDesc" placeholder="e.g. 200g pulao + 150g chicken thigh curry, 10ml oil" rows="3"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Macros</label>
+      <div class="input-row">
+        <div>
+          <input type="number" id="mealCal" placeholder="kcal" min="0" max="9999">
+          <div class="hint">Calories</div>
+        </div>
+        <div>
+          <input type="number" id="mealProt" placeholder="g" min="0" max="999" step="0.1">
+          <div class="hint">Protein (g)</div>
+        </div>
+        <div>
+          <input type="number" id="mealFat" placeholder="g" min="0" max="999" step="0.1">
+          <div class="hint">Fat (g)</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="modalCancel">Cancel</button>
+      <button class="btn btn-primary" id="modalSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/github-api.js"></script>
+<script src="js/targets.js"></script>
+<script>
+// ── State ──
+let currentDate = todayStr();
+let logData = null;      // { date, meals: [] }
+let logSha  = null;
+let targets = null;      // { calories, protein_g, fat_g }
+let editingId = null;
+
+function todayStr() {
+  return new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+}
+
+function fmtDate(d) {
+  if (d === todayStr()) return 'Today';
+  const dt = new Date(d + 'T12:00:00');
+  return dt.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+}
+
+// ── Init ──
+async function init() {
+  if (!GH.isConfigured()) {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    showToast('Set up GitHub in Settings first', 4000);
+    return;
+  }
+  renderDateNav();
+  await loadPage();
+}
+
+function renderDateNav() {
+  document.getElementById('dateLabel').textContent = fmtDate(currentDate);
+  document.getElementById('nextDay').disabled = currentDate >= todayStr();
+}
+
+async function loadPage() {
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+  try {
+    const [logRes, targRes, measRes] = await Promise.all([
+      GH.readJSON(`logs/${currentDate}.json`),
+      GH.readJSON('targets.json'),
+      GH.readJSON(`measurements/${currentDate}.json`),
+    ]);
+
+    logData = logRes ? logRes.data : { date: currentDate, meals: [] };
+    logSha  = logRes ? logRes.sha : null;
+    targets = targRes ? targRes.data : null;
+
+    renderSummary();
+    renderMeals();
+    renderMeasurement(measRes ? measRes.data : null);
+  } catch (e) {
+    showToast('Error loading: ' + e.message, 5000);
+  }
+  document.getElementById('loadingOverlay').classList.add('hidden');
+}
+
+// ── Render summary ──
+function renderSummary() {
+  const meals = logData?.meals || [];
+  const totCal  = meals.reduce((s,m) => s + (m.calories || 0), 0);
+  const totProt = meals.reduce((s,m) => s + (m.protein_g || 0), 0);
+  const totFat  = meals.reduce((s,m) => s + (m.fat_g || 0), 0);
+
+  const tCal  = targets?.calories  || 0;
+  const tProt = targets?.protein_g || 0;
+  const tFat  = targets?.fat_g     || 0;
+
+  document.getElementById('calConsumed').textContent = Math.round(totCal);
+  document.getElementById('calTarget').textContent = tCal ? `/ ${tCal} kcal` : '/ — kcal';
+
+  if (tCal) {
+    const rem = tCal - totCal;
+    const cls = statusClass(totCal, tCal);
+    document.getElementById('calRemain').textContent = rem >= 0 ? `${Math.round(rem)} left` : `${Math.abs(Math.round(rem))} over`;
+    document.getElementById('calRemain').className = `cal-remain ${cls}`;
+    setBar('calBar', pct(totCal, tCal), cls);
+  }
+
+  setMacro('prot', totProt, tProt, 'g');
+  setMacro('fat',  totFat,  tFat,  'g');
+
+  document.getElementById('mealCount').textContent = meals.length;
+  document.getElementById('mealNote').textContent  = meals.length === 1 ? 'meal' : 'meals';
+}
+
+function setMacro(key, val, target, unit) {
+  const cls = target ? statusClass(val, target) : 'ok';
+  document.getElementById(`${key}Val`).textContent = Math.round(val * 10) / 10 + unit;
+  document.getElementById(`${key}Val`).className = `macro-value ${cls}`;
+  if (target) {
+    const rem = target - val;
+    document.getElementById(`${key}Remain`).textContent = rem >= 0 ? `${Math.round(rem)}${unit} left` : `${Math.abs(Math.round(rem))}${unit} over`;
+    setBar(`${key}Bar`, pct(val, target), cls);
+  }
+}
+
+function setBar(id, percent, cls) {
+  const el = document.getElementById(id);
+  el.style.width = percent + '%';
+  el.className = `bar-fill ${cls}`;
+}
+
+// ── Render meals ──
+function renderMeals() {
+  const list = document.getElementById('mealList');
+  const meals = logData?.meals || [];
+  document.getElementById('emptyState').style.display = meals.length ? 'none' : '';
+
+  // Remove old meal items
+  list.querySelectorAll('.meal-item').forEach(el => el.remove());
+
+  meals.forEach(meal => {
+    const div = document.createElement('div');
+    div.className = 'meal-item';
+    div.dataset.id = meal.id;
+    div.innerHTML = `
+      <div class="meal-info">
+        <div class="meal-time">${meal.time || ''}</div>
+        <div class="meal-desc">${escHtml(meal.description || '')}</div>
+        <div class="meal-macros">
+          <span>${meal.calories || 0} kcal</span>
+          <span>${meal.protein_g || 0}g protein</span>
+          <span>${meal.fat_g || 0}g fat</span>
+        </div>
+      </div>
+      <div class="meal-actions">
+        <button class="btn-icon edit-btn" data-id="${meal.id}" aria-label="Edit">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="btn-icon del del-btn" data-id="${meal.id}" aria-label="Delete">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
+      </div>`;
+    list.appendChild(div);
+  });
+
+  list.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', () => openEdit(btn.dataset.id)));
+  list.querySelectorAll('.del-btn').forEach(btn => btn.addEventListener('click', () => deleteMeal(btn.dataset.id)));
+}
+
+function renderMeasurement(meas) {
+  const hasWeight = meas?.weight_kg != null;
+  const hasWaist  = meas?.waist_cm  != null;
+  const show = hasWeight || hasWaist;
+  document.getElementById('measSection').style.display = show ? '' : 'none';
+  document.getElementById('measCard').style.display    = show ? '' : 'none';
+  if (show) {
+    document.getElementById('weightRow').style.display = hasWeight ? '' : 'none';
+    document.getElementById('waistRow').style.display  = hasWaist  ? '' : 'none';
+    if (hasWeight) document.getElementById('weightVal').textContent = meas.weight_kg + ' kg';
+    if (hasWaist)  document.getElementById('waistVal').textContent  = meas.waist_cm  + ' cm';
+  }
+}
+
+// ── Modal ──
+function openAdd() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Add Meal';
+  document.getElementById('mealTime').value = 'lunch';
+  document.getElementById('mealDesc').value = '';
+  document.getElementById('mealCal').value  = '';
+  document.getElementById('mealProt').value = '';
+  document.getElementById('mealFat').value  = '';
+  document.getElementById('mealModal').classList.remove('hidden');
+  document.getElementById('mealDesc').focus();
+}
+
+function openEdit(id) {
+  const meal = (logData?.meals || []).find(m => m.id === id);
+  if (!meal) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Edit Meal';
+  document.getElementById('mealTime').value = meal.time || 'lunch';
+  document.getElementById('mealDesc').value = meal.description || '';
+  document.getElementById('mealCal').value  = meal.calories  ?? '';
+  document.getElementById('mealProt').value = meal.protein_g ?? '';
+  document.getElementById('mealFat').value  = meal.fat_g     ?? '';
+  document.getElementById('mealModal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('mealModal').classList.add('hidden');
+  editingId = null;
+}
+
+async function saveMeal() {
+  const desc = document.getElementById('mealDesc').value.trim();
+  const cal  = parseFloat(document.getElementById('mealCal').value)  || 0;
+  const prot = parseFloat(document.getElementById('mealProt').value) || 0;
+  const fat  = parseFloat(document.getElementById('mealFat').value)  || 0;
+  if (!desc) { showToast('Enter a description'); return; }
+
+  document.getElementById('modalSave').disabled = true;
+  document.getElementById('modalSave').textContent = 'Saving…';
+
+  try {
+    if (!logData) logData = { date: currentDate, meals: [] };
+    if (editingId) {
+      const idx = logData.meals.findIndex(m => m.id === editingId);
+      if (idx !== -1) {
+        logData.meals[idx] = { ...logData.meals[idx], time: document.getElementById('mealTime').value, description: desc, calories: cal, protein_g: prot, fat_g: fat };
+      }
+    } else {
+      const id = 'm' + Date.now();
+      logData.meals.push({ id, time: document.getElementById('mealTime').value, description: desc, calories: cal, protein_g: prot, fat_g: fat, estimate: false });
+    }
+
+    const res = await GH.writeJSON(`logs/${currentDate}.json`, logData, logSha, editingId ? 'edit meal entry' : 'add meal entry');
+    logSha = res.content.sha;
+
+    renderSummary();
+    renderMeals();
+    closeModal();
+    showToast(editingId ? 'Meal updated' : 'Meal added');
+  } catch (e) {
+    showToast('Save failed: ' + e.message, 5000);
+  }
+  document.getElementById('modalSave').disabled = false;
+  document.getElementById('modalSave').textContent = 'Save';
+}
+
+async function deleteMeal(id) {
+  if (!confirm('Delete this meal?')) return;
+  logData.meals = logData.meals.filter(m => m.id !== id);
+  try {
+    const res = await GH.writeJSON(`logs/${currentDate}.json`, logData, logSha, 'delete meal entry');
+    logSha = res.content.sha;
+    renderSummary();
+    renderMeals();
+    showToast('Meal deleted');
+  } catch (e) {
+    showToast('Delete failed: ' + e.message, 4000);
+  }
+}
+
+// ── Date navigation ──
+document.getElementById('prevDay').addEventListener('click', () => {
+  const d = new Date(currentDate + 'T12:00:00');
+  d.setDate(d.getDate() - 1);
+  currentDate = d.toLocaleDateString('en-CA');
+  renderDateNav();
+  loadPage();
+});
+document.getElementById('nextDay').addEventListener('click', () => {
+  if (currentDate >= todayStr()) return;
+  const d = new Date(currentDate + 'T12:00:00');
+  d.setDate(d.getDate() + 1);
+  currentDate = d.toLocaleDateString('en-CA');
+  renderDateNav();
+  loadPage();
+});
+
+// ── Helpers ──
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let toastTimer;
+function showToast(msg, dur = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// ── Wire up events ──
+document.getElementById('fabAdd').addEventListener('click', openAdd);
+document.getElementById('modalClose').addEventListener('click', closeModal);
+document.getElementById('modalCancel').addEventListener('click', closeModal);
+document.getElementById('modalSave').addEventListener('click', saveMeal);
+document.getElementById('mealModal').addEventListener('click', e => { if (e.target === document.getElementById('mealModal')) closeModal(); });
+
+init();
+</script>
+</body>
+</html>
