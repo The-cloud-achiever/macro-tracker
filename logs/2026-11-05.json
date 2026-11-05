@@ -18,6 +18,15 @@
       "protein_g": 40,
       "fat_g": 40,
       "estimate": false
+    },
+    {
+      "id": "m1793896414613",
+      "time": "snack",
+      "description": "protein shake",
+      "calories": 122,
+      "protein_g": 40,
+      "fat_g": 1.2,
+      "estimate": false
     }
   ]
 }
