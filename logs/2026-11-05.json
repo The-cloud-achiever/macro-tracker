@@ -9,6 +9,15 @@
       "protein_g": 34,
       "fat_g": 23,
       "estimate": false
+    },
+    {
+      "id": "m1793896122532",
+      "time": "lunch",
+      "description": "chicken and fries",
+      "calories": 600,
+      "protein_g": 40,
+      "fat_g": 40,
+      "estimate": false
     }
   ]
 }
