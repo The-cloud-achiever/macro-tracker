@@ -8,6 +8,55 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#2d7dd2">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <style>
+    /* ── Calendar ── */
+    .cal-nav { display:flex; align-items:center; justify-content:space-between; margin:12px 0 8px; }
+    .cal-nav h2 { font-size:1rem; font-weight:600; }
+    .cal-nav button { background:none; border:none; color:var(--accent); cursor:pointer; font-size:1.2rem; padding:4px 10px; border-radius:6px; }
+    .cal-nav button:hover { background:var(--border); }
+
+    .cal-grid {
+      display:grid; grid-template-columns:repeat(7,1fr);
+      gap:3px; margin-bottom:12px;
+    }
+    .cal-dow {
+      text-align:center; font-size:.65rem; font-weight:600;
+      text-transform:uppercase; letter-spacing:.04em;
+      color:var(--muted); padding:4px 0;
+    }
+    .cal-cell {
+      aspect-ratio:1; border-radius:8px;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      cursor:pointer; position:relative; gap:1px;
+      transition:background .15s;
+      min-height:40px;
+    }
+    .cal-cell:hover { background:var(--border); }
+    .cal-cell.empty { cursor:default; }
+    .cal-cell.empty:hover { background:none; }
+    .cal-cell.today .cal-num { background:var(--accent); color:#fff; border-radius:50%; width:22px; height:22px; display:flex; align-items:center; justify-content:center; }
+    .cal-num { font-size:.8rem; font-weight:500; line-height:1; }
+    .cal-dot {
+      width:5px; height:5px; border-radius:50%;
+    }
+    .cal-dot.ok   { background:var(--bar-ok); }
+    .cal-dot.near { background:var(--bar-near); }
+    .cal-dot.over { background:var(--bar-over); }
+    .cal-kcal { font-size:.55rem; color:var(--muted); line-height:1; }
+
+    /* Legend */
+    .cal-legend { display:flex; gap:12px; justify-content:center; margin-bottom:14px; flex-wrap:wrap; }
+    .cal-legend-item { display:flex; align-items:center; gap:4px; font-size:.72rem; color:var(--muted); }
+    .cal-legend-dot { width:8px; height:8px; border-radius:50%; }
+
+    /* View toggle */
+    .view-toggle { display:flex; gap:0; border:1px solid var(--border); border-radius:8px; overflow:hidden; margin:12px 0; }
+    .view-toggle button {
+      flex:1; padding:8px; background:none; border:none; cursor:pointer;
+      font-size:.82rem; color:var(--muted); transition:background .15s, color .15s;
+    }
+    .view-toggle button.active { background:var(--accent); color:#fff; }
+  </style>
 </head>
 <body>
 
@@ -22,16 +71,41 @@
 </header>
 
 <main class="page">
-  <div id="historyList">
-    <div class="empty" id="emptyState">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
-      <p>No history yet — log some meals first.</p>
+
+  <!-- View toggle -->
+  <div class="view-toggle">
+    <button id="btnCal" class="active">📅 Calendar</button>
+    <button id="btnList">📋 List</button>
+  </div>
+
+  <!-- Calendar view -->
+  <div id="calView">
+    <div class="cal-nav">
+      <button id="calPrev">&#8249;</button>
+      <h2 id="calMonthLabel"></h2>
+      <button id="calNext">&#8250;</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-legend">
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--bar-ok)"></div> Under target</div>
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--bar-near)"></div> Near target</div>
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--bar-over)"></div> Over target</div>
     </div>
   </div>
 
-  <div style="text-align:center; margin-top:16px;">
-    <button class="btn btn-secondary" id="loadMoreBtn" style="display:none;">Load more</button>
+  <!-- List view -->
+  <div id="listView" style="display:none;">
+    <div id="historyList">
+      <div class="empty" id="emptyState">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+        <p>No history yet — log some meals first.</p>
+      </div>
+    </div>
+    <div style="text-align:center; margin-top:16px;">
+      <button class="btn btn-secondary" id="loadMoreBtn" style="display:none;">Load more</button>
+    </div>
   </div>
+
 </main>
 
 <!-- Day detail modal -->
@@ -71,21 +145,33 @@
 <script src="js/github-api.js"></script>
 <script src="js/targets.js"></script>
 <script>
-const PAGE_SIZE = 30;
-let allDates = [];
+// ── Shared state ──
+let allDates  = [];
 let loadedCount = 0;
-let targets = null;
-let dayCache = {};
+let targets   = null;
+let dayCache  = {};   // date -> log data
+let calYear, calMonth;  // currently displayed calendar month
+
+const PAGE_SIZE = 30;
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 function todayStr() { return new Date().toLocaleDateString('en-CA'); }
 
-function fmtDate(d) {
+function fmtDateLong(d) {
   if (d === todayStr()) return 'Today';
   const dt = new Date(d + 'T12:00:00');
   return dt.toLocaleDateString('en-US', { weekday:'short', month:'long', day:'numeric', year:'numeric' });
 }
 
+// ── Init ──
 async function init() {
+  const today = new Date();
+  calYear  = today.getFullYear();
+  calMonth = today.getMonth();
+
+  // Always render the calendar shell with current month dates
+  renderCalendar();
+
   if (!GH.isConfigured()) {
     document.getElementById('loadingOverlay').classList.add('hidden');
     showToast('Set up GitHub in Settings first', 4000);
@@ -100,72 +186,163 @@ async function init() {
     allDates = files
       .filter(f => f.name.endsWith('.json'))
       .map(f => f.name.replace('.json',''))
-      .sort((a,b) => b.localeCompare(a));  // newest first
+      .sort((a,b) => b.localeCompare(a));
+
+    // Load data for current month and re-render with dots
+    await loadMonthData(calYear, calMonth);
+    renderCalendar();
 
     document.getElementById('emptyState').style.display = allDates.length ? 'none' : '';
-    await loadBatch();
   } catch (e) {
     showToast('Error: ' + e.message, 5000);
   }
   document.getElementById('loadingOverlay').classList.add('hidden');
 }
 
+// ── Load a month's data into dayCache ──
+async function loadMonthData(year, month) {
+  const prefix = `${year}-${String(month + 1).padStart(2,'0')}`;
+  const needed = allDates.filter(d => d.startsWith(prefix) && !dayCache[d]);
+  if (!needed.length) return;
+  const results = await Promise.all(needed.map(d => GH.readJSON(`logs/${d}.json`).catch(() => null)));
+  results.forEach((res, i) => { if (res) dayCache[needed[i]] = res.data; });
+}
+
+// ── Calendar rendering ──
+function renderCalendar() {
+  const label = new Date(calYear, calMonth, 1)
+    .toLocaleDateString('en-US', { month:'long', year:'numeric' });
+  document.getElementById('calMonthLabel').textContent = label;
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  // Day-of-week headers
+  DAYS.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'cal-dow';
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const today = todayStr();
+
+  // Empty leading cells
+  for (let i = 0; i < firstDay; i++) {
+    const el = document.createElement('div');
+    el.className = 'cal-cell empty';
+    grid.appendChild(el);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const log = dayCache[dateStr];
+    const isToday = dateStr === today;
+    const hasData = !!log;
+
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell' + (isToday ? ' today' : '') + (hasData ? '' : ' no-data');
+
+    let dot = '', kcalLabel = '';
+    if (hasData) {
+      const meals = log.meals || [];
+      const totCal = meals.reduce((s,m) => s + (m.calories || 0), 0);
+      const cls = targets?.calories ? statusClass(totCal, targets.calories) : 'ok';
+      dot = `<div class="cal-dot ${cls}"></div>`;
+      kcalLabel = `<div class="cal-kcal">${totCal >= 1000 ? (totCal/1000).toFixed(1)+'k' : Math.round(totCal)}</div>`;
+      cell.addEventListener('click', () => openDay(dateStr));
+    }
+
+    cell.innerHTML = `<div class="cal-num">${d}</div>${dot}${kcalLabel}`;
+    grid.appendChild(cell);
+  }
+}
+
+// ── Calendar navigation ──
+document.getElementById('calPrev').addEventListener('click', async () => {
+  calMonth--;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+  await loadMonthData(calYear, calMonth);
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  renderCalendar();
+});
+document.getElementById('calNext').addEventListener('click', async () => {
+  const now = new Date();
+  if (calYear >= now.getFullYear() && calMonth >= now.getMonth()) return;
+  calMonth++;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+  await loadMonthData(calYear, calMonth);
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  renderCalendar();
+});
+
+// ── List view ──
 async function loadBatch() {
   const batch = allDates.slice(loadedCount, loadedCount + PAGE_SIZE);
   if (!batch.length) return;
-
-  const results = await Promise.all(batch.map(d => GH.readJSON(`logs/${d}.json`).catch(() => null)));
-  results.forEach((res, i) => {
-    if (res) {
-      dayCache[batch[i]] = res.data;
-      renderDay(batch[i], res.data);
-    }
-  });
+  const needed = batch.filter(d => !dayCache[d]);
+  if (needed.length) {
+    const results = await Promise.all(needed.map(d => GH.readJSON(`logs/${d}.json`).catch(() => null)));
+    results.forEach((res, i) => { if (res) dayCache[needed[i]] = res.data; });
+  }
+  batch.forEach(d => { if (dayCache[d]) renderDayRow(d, dayCache[d]); });
   loadedCount += batch.length;
   document.getElementById('loadMoreBtn').style.display = loadedCount < allDates.length ? '' : 'none';
 }
 
-function renderDay(date, log) {
+function renderDayRow(date, log) {
   const list = document.getElementById('historyList');
   const meals = log.meals || [];
   const totCal  = meals.reduce((s,m) => s + (m.calories || 0), 0);
   const totProt = meals.reduce((s,m) => s + (m.protein_g || 0), 0);
   const totFat  = meals.reduce((s,m) => s + (m.fat_g || 0), 0);
-
   const cls = targets?.calories ? statusClass(totCal, targets.calories) : 'ok';
 
   const div = document.createElement('div');
   div.className = 'history-day';
-  div.dataset.date = date;
   div.innerHTML = `
     <div class="history-day-header">
-      <span class="history-date">${fmtDate(date)}</span>
+      <span class="history-date">${fmtDateLong(date)}</span>
       <span class="history-cal ${cls}">${Math.round(totCal)} kcal</span>
     </div>
-    <div class="history-macros">${meals.length} meal${meals.length !== 1 ? 's' : ''} · ${Math.round(totProt)}g protein · ${Math.round(totFat)}g fat</div>
+    <div class="history-macros">${meals.length} meal${meals.length !== 1?'s':''} · ${Math.round(totProt)}g protein · ${Math.round(totFat)}g fat</div>
     ${targets?.calories ? `<div class="bar-wrap" style="margin-top:8px;"><div class="bar-fill ${cls}" style="width:${pct(totCal, targets.calories)}%"></div></div>` : ''}
   `;
   div.addEventListener('click', () => openDay(date));
   list.appendChild(div);
 }
 
-function openDay(date) {
+// ── Day detail modal ──
+async function openDay(date) {
+  if (!dayCache[date]) {
+    try {
+      const res = await GH.readJSON(`logs/${date}.json`);
+      if (res) dayCache[date] = res.data; else return;
+    } catch { return; }
+  }
   const log = dayCache[date];
-  if (!log) return;
   const meals = log.meals || [];
-
-  document.getElementById('dayModalTitle').textContent = fmtDate(date);
-
   const totCal  = meals.reduce((s,m) => s + (m.calories || 0), 0);
   const totProt = meals.reduce((s,m) => s + (m.protein_g || 0), 0);
   const totFat  = meals.reduce((s,m) => s + (m.fat_g || 0), 0);
 
+  document.getElementById('dayModalTitle').textContent = fmtDateLong(date);
+
+  const cls = targets?.calories ? statusClass(totCal, targets.calories) : 'ok';
   let html = `
-    <div class="macro-grid" style="margin-bottom:16px;">
-      <div class="macro-cell"><div class="macro-label">Calories</div><div class="macro-value" style="color:var(--text)">${Math.round(totCal)}</div></div>
+    <div class="macro-grid" style="margin-bottom:4px;">
+      <div class="macro-cell"><div class="macro-label">Calories</div><div class="macro-value ${cls}">${Math.round(totCal)}</div></div>
       <div class="macro-cell"><div class="macro-label">Protein</div><div class="macro-value" style="color:var(--text)">${Math.round(totProt)}g</div></div>
       <div class="macro-cell"><div class="macro-label">Fat</div><div class="macro-value" style="color:var(--text)">${Math.round(totFat)}g</div></div>
     </div>`;
+
+  if (targets?.calories) {
+    html += `<div class="bar-wrap" style="margin-bottom:16px;"><div class="bar-fill ${cls}" style="width:${pct(totCal, targets.calories)}%"></div></div>`;
+  }
 
   meals.forEach(m => {
     html += `
@@ -181,12 +358,30 @@ function openDay(date) {
         </div>
       </div>`;
   });
-
   if (!meals.length) html += '<div class="empty" style="padding:20px;"><p>No meals logged</p></div>';
 
   document.getElementById('dayModalContent').innerHTML = html;
   document.getElementById('dayModal').classList.remove('hidden');
 }
+
+// ── View toggle ──
+document.getElementById('btnCal').addEventListener('click', () => {
+  document.getElementById('calView').style.display  = '';
+  document.getElementById('listView').style.display = 'none';
+  document.getElementById('btnCal').classList.add('active');
+  document.getElementById('btnList').classList.remove('active');
+});
+document.getElementById('btnList').addEventListener('click', async () => {
+  document.getElementById('calView').style.display  = 'none';
+  document.getElementById('listView').style.display = '';
+  document.getElementById('btnCal').classList.remove('active');
+  document.getElementById('btnList').classList.add('active');
+  if (loadedCount === 0) {
+    document.getElementById('loadingOverlay').classList.remove('hidden');
+    await loadBatch();
+    document.getElementById('loadingOverlay').classList.add('hidden');
+  }
+});
 
 document.getElementById('dayModalClose').addEventListener('click', () => document.getElementById('dayModal').classList.add('hidden'));
 document.getElementById('dayModal').addEventListener('click', e => { if (e.target === document.getElementById('dayModal')) document.getElementById('dayModal').classList.add('hidden'); });
