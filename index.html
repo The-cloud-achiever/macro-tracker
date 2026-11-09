@@ -99,6 +99,10 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
     History
   </a>
+  <a href="recipes.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    Recipes
+  </a>
   <a href="body.html">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l4-8 4 6 3-4 4 6"/></svg>
     Body
@@ -118,6 +122,30 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
+
+    <!-- Source toggle (only shown when adding, not editing) -->
+    <div id="sourceToggleWrap" style="margin-bottom:4px;">
+      <div class="source-toggle">
+        <button id="srcManual" class="active">Manual</button>
+        <button id="srcRecipe">From Recipe</button>
+      </div>
+    </div>
+
+    <!-- Recipe picker section (hidden in manual mode) -->
+    <div id="recipeSection" style="display:none;">
+      <div class="form-group">
+        <label for="recipeSelect">Recipe</label>
+        <select id="recipeSelect">
+          <option value="">— choose a recipe —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="mealPortionG">Portion size (g)</label>
+        <input type="number" id="mealPortionG" placeholder="e.g. 200" min="1" step="1">
+        <div class="hint" id="portionHint"></div>
+      </div>
+    </div>
+
     <div class="form-group">
       <label for="mealTime">Time of day</label>
       <select id="mealTime">
@@ -129,7 +157,7 @@
     </div>
     <div class="form-group">
       <label for="mealDesc">Description</label>
-      <textarea id="mealDesc" placeholder="e.g. 200g pulao + 150g chicken thigh curry, 10ml oil" rows="3"></textarea>
+      <textarea id="mealDesc" placeholder="e.g. 200g pulao + 150g chicken curry" rows="2"></textarea>
     </div>
     <div class="form-group">
       <label>Macros</label>
@@ -163,11 +191,12 @@
 <script>checkAuth();</script>
 <script>
 // ── State ──
-let currentDate = todayStr();
-let logData = null;      // { date, meals: [] }
-let logSha  = null;
-let targets = null;      // { calories, protein_g, fat_g }
-let editingId = null;
+let currentDate  = todayStr();
+let logData      = null;    // { date, meals: [] }
+let logSha       = null;
+let targets      = null;    // { calories, protein_g, fat_g }
+let editingId    = null;
+let recipesCache = [];      // loaded once from recipes.json
 
 function todayStr() {
   return new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
@@ -187,7 +216,14 @@ async function init() {
     return;
   }
   renderDateNav();
-  await loadPage();
+  await Promise.all([loadPage(), loadRecipes()]);
+}
+
+async function loadRecipes() {
+  try {
+    const res = await GH.readJSON('recipes.json');
+    recipesCache = res ? (res.data.recipes || []) : [];
+  } catch { recipesCache = []; }
 }
 
 function renderDateNav() {
@@ -316,9 +352,50 @@ function renderMeasurement(meas) {
 }
 
 // ── Modal ──
+function switchSource(mode) {
+  const isRecipe = mode === 'recipe';
+  document.getElementById('recipeSection').style.display = isRecipe ? '' : 'none';
+  document.getElementById('srcManual').classList.toggle('active', !isRecipe);
+  document.getElementById('srcRecipe').classList.toggle('active', isRecipe);
+  if (!isRecipe) {
+    document.getElementById('recipeSelect').value    = '';
+    document.getElementById('mealPortionG').value    = '';
+    document.getElementById('portionHint').textContent = '';
+  }
+}
+
+function populateRecipeSelect() {
+  const sel = document.getElementById('recipeSelect');
+  sel.innerHTML = '<option value="">— choose a recipe —</option>';
+  recipesCache.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = r.name;
+    sel.appendChild(opt);
+  });
+}
+
+function calcFromRecipe() {
+  const sel     = document.getElementById('recipeSelect');
+  const portionG = parseFloat(document.getElementById('mealPortionG').value);
+  if (!sel.value || !(portionG > 0)) return;
+  const r = recipesCache.find(r => r.id === sel.value);
+  if (!r) return;
+  const ratio = portionG / r.total_g;
+  document.getElementById('mealCal').value  = Math.round(r.calories  * ratio);
+  document.getElementById('mealProt').value = Math.round(r.protein_g * ratio * 10) / 10;
+  document.getElementById('mealFat').value  = Math.round(r.fat_g     * ratio * 10) / 10;
+  document.getElementById('mealDesc').value = `${r.name} (${portionG}g)`;
+  document.getElementById('portionHint').textContent =
+    `From recipe: ${r.total_g}g batch · ${Math.round(r.calories/r.total_g*100)} kcal/100g`;
+}
+
 function openAdd() {
   editingId = null;
   document.getElementById('modalTitle').textContent = 'Add Meal';
+  document.getElementById('sourceToggleWrap').style.display = '';
+  switchSource('manual');
+  populateRecipeSelect();
   document.getElementById('mealTime').value = 'lunch';
   document.getElementById('mealDesc').value = '';
   document.getElementById('mealCal').value  = '';
@@ -333,6 +410,8 @@ function openEdit(id) {
   if (!meal) return;
   editingId = id;
   document.getElementById('modalTitle').textContent = 'Edit Meal';
+  document.getElementById('sourceToggleWrap').style.display = 'none';
+  document.getElementById('recipeSection').style.display    = 'none';
   document.getElementById('mealTime').value = meal.time || 'lunch';
   document.getElementById('mealDesc').value = meal.description || '';
   document.getElementById('mealCal').value  = meal.calories  ?? '';
@@ -433,6 +512,17 @@ document.getElementById('modalClose').addEventListener('click', closeModal);
 document.getElementById('modalCancel').addEventListener('click', closeModal);
 document.getElementById('modalSave').addEventListener('click', saveMeal);
 document.getElementById('mealModal').addEventListener('click', e => { if (e.target === document.getElementById('mealModal')) closeModal(); });
+
+document.getElementById('srcManual').addEventListener('click', () => switchSource('manual'));
+document.getElementById('srcRecipe').addEventListener('click', () => switchSource('recipe'));
+
+document.getElementById('recipeSelect').addEventListener('change', () => {
+  if (document.getElementById('recipeSelect').value && !document.getElementById('mealPortionG').value) {
+    document.getElementById('mealPortionG').value = 100;
+  }
+  calcFromRecipe();
+});
+document.getElementById('mealPortionG').addEventListener('input', calcFromRecipe);
 
 init();
 </script>

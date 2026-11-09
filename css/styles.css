@@ -100,8 +100,8 @@ header h1 { font-size: 1.1rem; font-weight: 600; }
 }
 .bottom-nav a {
   display: flex; flex-direction: column; align-items: center;
-  gap: 2px; padding: 10px 0; min-width: 60px;
-  color: var(--muted); text-decoration: none; font-size: .7rem;
+  gap: 2px; padding: 10px 0; flex: 1; min-width: 0;
+  color: var(--muted); text-decoration: none; font-size: .65rem;
   transition: color .15s;
 }
 .bottom-nav a.active, .bottom-nav a:hover { color: var(--accent); }
@@ -299,3 +299,17 @@ textarea { resize: vertical; min-height: 60px; }
 .meas-row:last-child { border-bottom: none; }
 .meas-label { font-size: .85rem; color: var(--muted); }
 .meas-value { font-weight: 600; }
+
+/* ── Source toggle (manual / from recipe) ── */
+.source-toggle {
+  display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+}
+.source-toggle button {
+  flex: 1; padding: 8px; background: none; border: none; cursor: pointer;
+  font-size: .82rem; color: var(--muted); transition: background .15s, color .15s;
+  font-family: inherit;
+}
+.source-toggle button.active { background: var(--accent); color: #fff; }
+
+/* ── Recipe card ── */
+.recipe-item { margin-top: 10px; }
