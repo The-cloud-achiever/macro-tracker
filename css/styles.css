@@ -65,7 +65,7 @@ body {
   color: var(--text);
   line-height: 1.5;
   min-height: 100dvh;
-  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  padding-left: 64px;
 }
 
 /* ── Layout ── */
@@ -86,25 +86,28 @@ header h1 { font-size: 1.1rem; font-weight: 600; }
 .date-nav button:hover { background: var(--border); }
 .date-label { font-size: .85rem; color: var(--muted); white-space: nowrap; }
 
-/* ── Bottom nav ── */
+/* ── Side nav ── */
 .bottom-nav {
   position: fixed;
-  bottom: 0;
-  left: 0; right: 0;
+  left: 0; top: 0; bottom: 0;
+  width: 64px;
   background: var(--surface);
-  border-top: 1px solid var(--border);
+  border-right: 1px solid var(--border);
   display: flex;
-  justify-content: space-around;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding-top: calc(12px + env(safe-area-inset-top));
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 10;
 }
 .bottom-nav a {
   display: flex; flex-direction: column; align-items: center;
-  gap: 2px; padding: 10px 0; flex: 1; min-width: 0;
-  color: var(--muted); text-decoration: none; font-size: .65rem;
-  transition: color .15s;
+  gap: 3px; padding: 12px 0; width: 100%;
+  color: var(--muted); text-decoration: none; font-size: .6rem;
+  transition: color .15s, background .15s;
 }
-.bottom-nav a.active, .bottom-nav a:hover { color: var(--accent); }
+.bottom-nav a.active, .bottom-nav a:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
 .bottom-nav a svg { width: 22px; height: 22px; }
 
 /* ── Cards / surfaces ── */
@@ -188,7 +191,7 @@ header h1 { font-size: 1.1rem; font-weight: 600; }
 
 /* ── FAB ── */
 .fab {
-  position: fixed; bottom: calc(72px + env(safe-area-inset-bottom) + 16px); right: 16px;
+  position: fixed; bottom: calc(20px + env(safe-area-inset-bottom)); right: 20px;
   width: 52px; height: 52px; border-radius: 50%;
   background: var(--accent); color: #fff; border: none; cursor: pointer;
   font-size: 1.5rem; display: flex; align-items: center; justify-content: center;
@@ -236,7 +239,7 @@ textarea { resize: vertical; min-height: 60px; }
 
 /* ── Toast ── */
 .toast {
-  position: fixed; bottom: calc(72px + env(safe-area-inset-bottom) + 12px); left: 50%;
+  position: fixed; bottom: calc(20px + env(safe-area-inset-bottom)); left: calc(50% + 32px);
   transform: translateX(-50%) translateY(0);
   background: var(--text); color: var(--bg);
   padding: 10px 18px; border-radius: 8px; font-size: .88rem;
