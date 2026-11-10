@@ -27,6 +27,15 @@
       "protein_g": 21,
       "fat_g": 27,
       "estimate": false
+    },
+    {
+      "id": "m1794351991044",
+      "time": "dinner",
+      "description": "Dinner chicken + curry + yogurt",
+      "calories": 417,
+      "protein_g": 53.3,
+      "fat_g": 10.4,
+      "estimate": false
     }
   ]
 }
