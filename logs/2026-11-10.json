@@ -1,0 +1,14 @@
+{
+  "date": "2026-11-10",
+  "meals": [
+    {
+      "id": "m1794302194083",
+      "time": "breakfast",
+      "description": "Protein shake",
+      "calories": 500,
+      "protein_g": 34,
+      "fat_g": 23,
+      "estimate": false
+    }
+  ]
+}
