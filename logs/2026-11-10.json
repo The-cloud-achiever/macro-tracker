@@ -9,6 +9,15 @@
       "protein_g": 34,
       "fat_g": 23,
       "estimate": false
+    },
+    {
+      "id": "m1794311281206",
+      "time": "snack",
+      "description": "Matcha collagen",
+      "calories": 70,
+      "protein_g": 10,
+      "fat_g": 2,
+      "estimate": false
     }
   ]
 }
