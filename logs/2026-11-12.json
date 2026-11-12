@@ -1,0 +1,14 @@
+{
+  "date": "2026-11-12",
+  "meals": [
+    {
+      "id": "m1794514736156",
+      "time": "breakfast",
+      "description": "Pita bread eggs and collagen coffee",
+      "calories": 359,
+      "protein_g": 24.3,
+      "fat_g": 14.8,
+      "estimate": false
+    }
+  ]
+}
