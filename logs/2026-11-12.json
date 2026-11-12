@@ -9,6 +9,15 @@
       "protein_g": 24.3,
       "fat_g": 14.8,
       "estimate": false
+    },
+    {
+      "id": "m1794514864784",
+      "time": "lunch",
+      "description": "Biryani rice , soya tofu rajma curry , Greek yogurt",
+      "calories": 502,
+      "protein_g": 47,
+      "fat_g": 13.9,
+      "estimate": false
     }
   ]
 }
