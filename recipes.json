@@ -8,6 +8,15 @@
       "protein_g": 141,
       "fat_g": 56,
       "notes": ""
+    },
+    {
+      "id": "r1795525930768",
+      "name": "muesli",
+      "total_g": 100,
+      "calories": 324,
+      "protein_g": 11.9,
+      "fat_g": 9.5,
+      "notes": "with seeds"
     }
   ]
 }
