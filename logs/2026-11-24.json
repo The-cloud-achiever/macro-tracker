@@ -18,6 +18,15 @@
       "protein_g": 25,
       "fat_g": 0.8,
       "estimate": false
+    },
+    {
+      "id": "m1795526038864",
+      "time": "snack",
+      "description": "matcha drink",
+      "calories": 51,
+      "protein_g": 9.5,
+      "fat_g": 0.9,
+      "estimate": false
     }
   ]
 }
