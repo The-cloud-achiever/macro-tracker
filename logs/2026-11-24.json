@@ -9,6 +9,15 @@
       "protein_g": 11.9,
       "fat_g": 9.5,
       "estimate": false
+    },
+    {
+      "id": "m1795525976696",
+      "time": "lunch",
+      "description": "protein shake",
+      "calories": 385,
+      "protein_g": 25,
+      "fat_g": 0.8,
+      "estimate": false
     }
   ]
 }
