@@ -27,6 +27,15 @@
       "protein_g": 9.5,
       "fat_g": 0.9,
       "estimate": false
+    },
+    {
+      "id": "m1795540146703",
+      "time": "lunch",
+      "description": "halloumi wrap",
+      "calories": 364,
+      "protein_g": 18.9,
+      "fat_g": 31.3,
+      "estimate": false
     }
   ]
 }
